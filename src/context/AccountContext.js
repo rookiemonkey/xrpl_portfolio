@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useContext, useEffect } from 'react';
+import React, { useCallback, useState, useContext } from 'react';
+import Trade from '../models/Trade';
 import { HexCodeContext } from './HexCodeContext';
 import { StorageContext } from './StorageContext';
 
@@ -8,7 +9,7 @@ const AccountContextProvider = ({ children }) => {
   const { addMonitoring, updateMonitoring, retrieveMonitoring } = useContext(StorageContext)
   const { hexCodeMap } = useContext(HexCodeContext)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [account, setAccount] = useState({ address: '', trustlines: [], monitored: [], assets: {} })
+  const [account, setAccount] = useState({ address: '', trustlines: [], monitored: [], trades: {} })
 
   const handleSetAccount = useCallback(async address => {
     const raw = await fetch(`https://api.xrpscan.com/api/v1/account/${address}/trustlines`)
@@ -52,13 +53,23 @@ const AccountContextProvider = ({ children }) => {
     updateMonitoring(account.address, monitored)
   })
 
+  const addTrade = useCallback(tradeDetails => {
+    const trade = new Trade(tradeDetails)
+
+    if (!account.assets[trade.currency_hexcode]) {
+      setAccount({ ...account, assets: { ...account.assets, [trade.currency_hexcode]: [] } })
+    }
+
+    setAccount({ ...account, assets: { ...account.assets, [trade.currency_hexcode]: [...account.assets[trade.currency_hexcode], trade ] } })
+  })
+
   const handleRemoveAccount = useCallback(() => {
     setAccount({ address: '', trustlines: [], monitored: [] })
     setIsLoggedIn(false)
   })
 
   return (
-    <AccountContext.Provider value={{ isLoggedIn, account, handleSetAccount, handleRemoveAccount, handleAddMonitored, handleRemoveMonitored }} >
+    <AccountContext.Provider value={{ isLoggedIn, account, handleSetAccount, handleRemoveAccount, handleAddMonitored, handleRemoveMonitored, addTrade }} >
       {children}
     </AccountContext.Provider>
   )
